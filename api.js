@@ -77,7 +77,7 @@ app.get("/api/attack", (req, res) => {
     if (modul === "FULL") {
         executeAllAttacks(["GET", "POST", "HEAD"], host, time);
         res.json({
-            status: "SUCCESS", message: "LỆNH TẤN CÔNG (GET, POST, HEAD) ĐÃ GỬI",
+            status: "SUCCESS", message: "LỆNH ATTACK FULL (GET, POST, HEAD) ĐÃ GỬI",
             host: host, port: port, time: time, modul: "GET POST HEAD", method: method, pid: currentPID
         });
     } else {

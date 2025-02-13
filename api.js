@@ -41,7 +41,7 @@ const executeAllAttacks = (moduls, host, time) =>
 app.get("/api/attack", async (req, res) => {
     const { key, host, time, method, port, modul } = req.query;
 
-    const response = (statusCode, status, message, data = {}) => res.status(statusCode).json({ status, message, ...data });
+    const response = (statusCode, status, message, data = {}) => res.status(statusCode).json({ status, message, serverStatusCode: statusCode, ...data });
 
     if (activeAttacks >= MAX_CONCURRENT_ATTACKS || currentPID) return response(429, "ERROR", "ANOTHER ATTACK IS IN PROGRESS");
 

